@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mysqldb import MySQL
 
+
 app = Flask(__name__)
 
 app.config['MYSQL_HOST'] = 'localhost'
@@ -21,7 +22,7 @@ def Index():
     cur = mysql.connection.cursor()
     cur.execute('SELECT * FROM contacts')
     data = cur.fetchall()
-    print(data)
+    cur.close()
     return render_template('index.html', contacts=data)
 
 
@@ -35,17 +36,19 @@ def add_contact():
         phone = request.form['phone']
         email = request.form['email']
         cur = mysql.connection.cursor()
-        cur.execute('INSERT INTO contacts (fullname, phone, email)VALUES (%s, %s, %s)', (fullname, phone, email))
+        cur.execute('INSERT INTO contacts (fullname, phone, email) VALUES (%s,%s,%s)', (fullname, phone, email))
         mysql.connection.commit()
         flash('Contact added successfully')
         return redirect(url_for('Index'))
 
 
-@app.route('/edit/<id>')
-def edit_contact(id):
+@app.route('/edit/<id>', methods=['POST', 'GET'])
+def get_contact(id):
     cur = mysql.connection.cursor()
-    cur.execute('SELECT * FROM contacts WHERE id = %s', (id))
+    cur.execute('SELECT * FROM contacts WHERE id = {0}'.format(id))
     data = cur.fetchall()
+    cur.close()
+    print(data[0])
     return render_template('edit-contact.html', contact=data[0])
 
 
@@ -56,19 +59,19 @@ def update_contact(id):
         phone = request.form['phone']
         email = request.form['email']
         cur = mysql.connection.cursor()
-        cur.execute(""" 
-            UPDATE contacts 
+        cur.execute("""
+            UPDATE contacts
             SET fullname = %s,
-                phone = %s,
-                email = %s
-            WHERE id = %s        
-        """, (fullname, phone, email, id))
-    mysql.connection.commit()
-    flash('Contact updated successfully')
-    return redirect(url_for('Index'))
+                email = %s,
+                phone = %s
+            WHERE id = %s
+        """, (fullname, email, phone, (id)))
+        flash('Contact Updated Successfully')
+        mysql.connection.commit()
+        return redirect(url_for('Index'))
 
 
-@app.route('/delete/<string:id>')
+@app.route('/delete/<string:id>', methods=['POST', 'GET'])
 def delete_contact(id):
     cur = mysql.connection.cursor()
     cur.execute('DELETE FROM contacts WHERE id = {0}'.format(id))
